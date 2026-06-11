@@ -1,7 +1,7 @@
 id = "lammps"
 name = "LAMMPS"
 version = "0.4.0"
-schema_version = 2
+schema_version = 1
 authors = ["crack-time"]
 description = "LAMMPS input script support with syntax highlighting, hover documentation, and diagnostics"
 license = "MIT"
@@ -11,4 +11,5 @@ repository = "https://github.com/crack-time/lammps-tree-sitter"
 commit = "6fe801541d1c4fb8710b5bc20a6ffa95a641b1ec"
 
 [language_servers.lammps-lsp]
+name = "LAMMPS LSP"
 language = "lammps"

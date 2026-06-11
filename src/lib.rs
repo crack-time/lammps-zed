@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use zed_extension_api::{
-    self as zed, Architecture, DownloadedFileType, GithubReleaseOptions, LanguageServerId, Os,
-    Result,
+    self as zed, Architecture, DownloadedFileType, GithubReleaseOptions, LanguageServerId,
+    LanguageServerInstallationStatus, Os, Result,
 };
 
 struct LammpsExtension {
@@ -9,7 +9,7 @@ struct LammpsExtension {
 }
 
 impl LammpsExtension {
-    fn asset_for_platform(os: Os, arch: Architecture) -> Option<&'static str> {
+    fn asset_name(os: Os, arch: Architecture) -> Option<&'static str> {
         match (os, arch) {
             (Os::Linux, Architecture::X8664) => Some("lammps-lsp-x86_64-unknown-linux-gnu"),
             (Os::Windows, Architecture::X8664) => Some("lammps-lsp-x86_64-pc-windows-gnu.exe"),
@@ -17,6 +17,81 @@ impl LammpsExtension {
             (Os::Mac, Architecture::Aarch64) => Some("lammps-lsp-x86_64-apple-darwin"),
             _ => None,
         }
+    }
+
+    fn install_binary(&mut self, language_server_id: &LanguageServerId) -> Result<String> {
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &LanguageServerInstallationStatus::CheckingForUpdate,
+        );
+
+        let release = zed::latest_github_release(
+            "crack-time/lammps-lsp",
+            GithubReleaseOptions {
+                require_assets: true,
+                pre_release: false,
+            },
+        )
+        .map_err(|e| format!("Failed to fetch latest release: {e}"))?;
+
+        let (os, arch) = zed::current_platform();
+        let asset_name = Self::asset_name(os, arch)
+            .ok_or_else(|| format!("Unsupported platform: {os:?} {arch:?}"))?;
+
+        let asset = release
+            .assets
+            .iter()
+            .find(|a| a.name == asset_name)
+            .ok_or_else(|| {
+                format!(
+                    "Asset {asset_name} not found in release {}",
+                    release.version
+                )
+            })?;
+
+        let version_dir = format!("lammps-lsp-{}", release.version);
+        let binary_name = asset_name;
+        let binary_path = format!("{version_dir}/{binary_name}");
+
+        if !std::path::Path::new(&binary_path).exists() {
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &LanguageServerInstallationStatus::Downloading,
+            );
+
+            zed::download_file(
+                &asset.download_url,
+                &version_dir,
+                DownloadedFileType::Uncompressed,
+            )
+            .map_err(|e| format!("Failed to download binary: {e}"))?;
+
+            zed::make_file_executable(&binary_path)
+                .map_err(|e| format!("Failed to make binary executable: {e}"))?;
+
+            // Clean up old versions
+            if let Ok(entries) = std::fs::read_dir(".") {
+                for entry in entries.flatten() {
+                    if let Ok(name) = entry.file_name().into_string() {
+                        if name.starts_with("lammps-lsp-") && name != version_dir {
+                            std::fs::remove_dir_all(entry.path()).ok();
+                        }
+                    }
+                }
+            }
+        }
+
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &LanguageServerInstallationStatus::None,
+        );
+
+        self.cached_binary_path
+            .lock()
+            .unwrap()
+            .replace(binary_path.clone());
+
+        Ok(binary_path)
     }
 }
 
@@ -29,66 +104,36 @@ impl zed::Extension for LammpsExtension {
 
     fn language_server_command(
         &mut self,
-        _language_server_id: &LanguageServerId,
+        language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
+        // 1. Check cached binary
         if let Some(path) = self.cached_binary_path.lock().unwrap().clone() {
-            return Ok(zed::Command {
-                command: path,
-                args: vec![],
-                env: vec![],
-            });
+            if std::fs::metadata(&path).is_ok() {
+                return Ok(zed::Command {
+                    command: path,
+                    args: vec![],
+                    env: worktree.shell_env(),
+                });
+            }
         }
 
-        let (os, arch) = zed::current_platform();
-        let asset_name = Self::asset_for_platform(os, arch)
-            .ok_or_else(|| format!("unsupported platform: {os:?} {arch:?}"))?;
-
+        // 2. Check PATH
         if let Some(path) = worktree.which("lammps-lsp") {
-            *self.cached_binary_path.lock().unwrap() = Some(path.clone());
             return Ok(zed::Command {
                 command: path,
                 args: vec![],
-                env: vec![],
+                env: worktree.shell_env(),
             });
         }
 
-        let release = zed::latest_github_release(
-            "crack-time/lammps-lsp",
-            GithubReleaseOptions {
-                require_assets: true,
-                pre_release: false,
-            },
-        )?;
-
-        let asset = release
-            .assets
-            .iter()
-            .find(|a| a.name == asset_name)
-            .ok_or_else(|| {
-                format!(
-                    "asset {asset_name} not found in release {}",
-                    release.version
-                )
-            })?;
-
-        let binary_path = format!("lammps-lsp-{}", asset_name);
-        zed::download_file(
-            &asset.download_url,
-            &binary_path,
-            DownloadedFileType::Uncompressed,
-        )?;
-
-        #[cfg(not(target_os = "windows"))]
-        zed::make_file_executable(&binary_path)?;
-
-        let abs_path = binary_path;
-        *self.cached_binary_path.lock().unwrap() = Some(abs_path.clone());
+        // 3. Download from GitHub
+        let binary_path = self.install_binary(language_server_id)?;
 
         Ok(zed::Command {
-            command: abs_path,
+            command: binary_path,
             args: vec![],
-            env: vec![],
+            env: worktree.shell_env(),
         })
     }
 }
