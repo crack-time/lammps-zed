@@ -1,0 +1,15 @@
+name = "LAMMPS"
+scope = "source.lammps"
+injection_regex = "lammps"
+file_types = ["lmp", "lmps", "lammps", "in.*", "*.lammps"]
+autoclose_before = "{[(,"
+brackets = [
+  { pair = "{ }", surrounds = true },
+  { pair = "[ ]", surrounds = true },
+  { pair = "( )", surrounds = true },
+]
+
+[tree_sitter]
+syntax = "source.lammps"
+
+[language_servers.lammps-lsp]

@@ -1,0 +1,102 @@
+{
+  "fix": {
+    "prefix": "fix",
+    "body": "fix ${1:id} ${2:group} ${3:style} ${4:args}",
+    "description": "Set a fix"
+  },
+  "compute": {
+    "prefix": "compute",
+    "body": "compute ${1:id} ${2:group} ${3:style} ${4:args}",
+    "description": "Define a computation"
+  },
+  "variable": {
+    "prefix": "variable",
+    "body": "variable ${1:name} ${2:style} ${3:args}",
+    "description": "Define a variable"
+  },
+  "pair_style": {
+    "prefix": "pair_style",
+    "body": "pair_style ${1:style} ${2:args}",
+    "description": "Define pairwise style"
+  },
+  "pair_coeff": {
+    "prefix": "pair_coeff",
+    "body": "pair_coeff ${1:I} ${2:J} ${3:type} ${4:args}",
+    "description": "Specify pair coefficients"
+  },
+  "region": {
+    "prefix": "region",
+    "body": "region ${1:id} ${2:style} ${3:args}",
+    "description": "Define a geometric region"
+  },
+  "group": {
+    "prefix": "group",
+    "body": "group ${1:id} ${2:style} ${3:args}",
+    "description": "Define or modify a group of atoms"
+  },
+  "run": {
+    "prefix": "run",
+    "body": "run ${1:N}",
+    "description": "Run dynamics"
+  },
+  "minimize": {
+    "prefix": "minimize",
+    "body": "minimize ${1:etol} ${2:ftol} ${3:maxiter} ${4:maxeval}",
+    "description": "Perform energy minimization"
+  },
+  "dump": {
+    "prefix": "dump",
+    "body": "dump ${1:id} ${2:group} ${3:style} ${4:file} ${5:args}",
+    "description": "Dump atom information"
+  },
+  "thermo": {
+    "prefix": "thermo",
+    "body": "thermo ${1:N}",
+    "description": "Set thermo output frequency"
+  },
+  "thermo_style": {
+    "prefix": "thermo_style",
+    "body": "thermo_style ${1:style} ${2:args}",
+    "description": "Set thermo output style"
+  },
+  "velocity": {
+    "prefix": "velocity",
+    "body": "velocity ${1:group} ${2:style} ${3:args}",
+    "description": "Set velocities"
+  },
+  "neighbor": {
+    "prefix": "neighbor",
+    "body": "neighbor ${1:skin} ${2:style}",
+    "description": "Set neighbor parameters"
+  },
+  "neigh_modify": {
+    "prefix": "neigh_modify",
+    "body": "neigh_modify ${1:keyword} ${2:args}",
+    "description": "Modify neighbor list parameters"
+  },
+  "timestep": {
+    "prefix": "timestep",
+    "body": "timestep ${1:dt}",
+    "description": "Set timestep size"
+  },
+  "units": {
+    "prefix": "units",
+    "body": "units ${1|metal,real,lj,sio2,cgs,electron,micro,nano|}",
+    "description": "Set unit style"
+  },
+  "atom_style": {
+    "prefix": "atom_style",
+    "body": "atom_style ${1:style}",
+    "description": "Define atom style"
+  },
+  "boundary": {
+    "prefix": "boundary",
+    "body": "boundary ${1|x} ${2|y} ${3|z}",
+    "description": "Set boundary conditions"
+  },
+  "lattice": {
+    "prefix": "lattice",
+    "body": "lattice ${1:style} ${2:scale}",
+    "description": "Define lattice"
+  }
+}
