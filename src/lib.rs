@@ -14,7 +14,7 @@ impl LammpsExtension {
             (Os::Linux, Architecture::X8664) => Some("lammps-lsp-x86_64-unknown-linux-gnu"),
             (Os::Windows, Architecture::X8664) => Some("lammps-lsp-x86_64-pc-windows-gnu.exe"),
             (Os::Mac, Architecture::X8664) => Some("lammps-lsp-x86_64-apple-darwin"),
-            (Os::Mac, Architecture::Aarch64) => Some("lammps-lsp-x86_64-apple-darwin"),
+            (Os::Mac, Architecture::Aarch64) => Some("lammps-lsp-aarch64-apple-darwin"),
             _ => None,
         }
     }
@@ -32,26 +32,43 @@ impl LammpsExtension {
                 pre_release: false,
             },
         )
-        .map_err(|e| format!("Failed to fetch latest release: {e}"))?;
+        .map_err(|e| {
+            let msg = format!("Failed to fetch latest release: {e}");
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &LanguageServerInstallationStatus::Failed(msg.clone()),
+            );
+            msg
+        })?;
 
         let (os, arch) = zed::current_platform();
-        let asset_name = Self::asset_name(os, arch)
-            .ok_or_else(|| format!("Unsupported platform: {os:?} {arch:?}"))?;
+        let asset_name = Self::asset_name(os, arch).ok_or_else(|| {
+            let msg = format!("Unsupported platform: {os:?} {arch:?}");
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &LanguageServerInstallationStatus::Failed(msg.clone()),
+            );
+            msg
+        })?;
 
         let asset = release
             .assets
             .iter()
             .find(|a| a.name == asset_name)
             .ok_or_else(|| {
-                format!(
+                let msg = format!(
                     "Asset {asset_name} not found in release {}",
                     release.version
-                )
+                );
+                zed::set_language_server_installation_status(
+                    language_server_id,
+                    &LanguageServerInstallationStatus::Failed(msg.clone()),
+                );
+                msg
             })?;
 
         let version_dir = format!("lammps-lsp-{}", release.version);
-        let binary_name = asset_name;
-        let binary_path = format!("{version_dir}/{binary_name}");
+        let binary_path = format!("{version_dir}/{asset_name}");
 
         if !std::path::Path::new(&binary_path).exists() {
             zed::set_language_server_installation_status(
@@ -64,12 +81,24 @@ impl LammpsExtension {
                 &version_dir,
                 DownloadedFileType::Uncompressed,
             )
-            .map_err(|e| format!("Failed to download binary: {e}"))?;
+            .map_err(|e| {
+                let msg = format!("Failed to download binary: {e}");
+                zed::set_language_server_installation_status(
+                    language_server_id,
+                    &LanguageServerInstallationStatus::Failed(msg.clone()),
+                );
+                msg
+            })?;
 
-            zed::make_file_executable(&binary_path)
-                .map_err(|e| format!("Failed to make binary executable: {e}"))?;
+            zed::make_file_executable(&binary_path).map_err(|e| {
+                let msg = format!("Failed to make binary executable: {e}");
+                zed::set_language_server_installation_status(
+                    language_server_id,
+                    &LanguageServerInstallationStatus::Failed(msg.clone()),
+                );
+                msg
+            })?;
 
-            // Clean up old versions
             if let Ok(entries) = std::fs::read_dir(".") {
                 for entry in entries.flatten() {
                     if let Ok(name) = entry.file_name().into_string() {
@@ -107,7 +136,6 @@ impl zed::Extension for LammpsExtension {
         language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
-        // 1. Check cached binary
         if let Some(path) = self.cached_binary_path.lock().unwrap().clone() {
             if std::fs::metadata(&path).is_ok() {
                 return Ok(zed::Command {
@@ -118,7 +146,6 @@ impl zed::Extension for LammpsExtension {
             }
         }
 
-        // 2. Check PATH
         if let Some(path) = worktree.which("lammps-lsp") {
             return Ok(zed::Command {
                 command: path,
@@ -127,7 +154,6 @@ impl zed::Extension for LammpsExtension {
             });
         }
 
-        // 3. Download from GitHub
         let binary_path = self.install_binary(language_server_id)?;
 
         Ok(zed::Command {

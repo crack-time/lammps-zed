@@ -1,0 +1,34 @@
+name: Release WASM Extension
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
+      - name: Build WASM
+        run: cargo build --release --target wasm32-wasip2
+
+      - name: Prepare release files
+        run: |
+          cp target/wasm32-wasip2/release/lammps_zed.wasm extension.wasm
+          wasm-tools validate extension.wasm
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            extension.wasm
+            extension.toml
