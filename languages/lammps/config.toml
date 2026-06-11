@@ -1,16 +1,13 @@
 name = "LAMMPS"
+grammar = "lammps"
 scope = "source.lammps"
 injection_regex = "lammps"
-file_types = ["lmp", "lmps", "lammps", "in"]
+path_suffixes = ["lmp", "lmps", "lammps", "in"]
 autoclose_before = "{[(,"
 brackets = [
   { start = "{", end = "}", close = true, newline = true },
   { start = "[", end = "]", close = true, newline = true },
   { start = "(", end = ")", close = true, newline = true },
 ]
-
-[tree_sitter]
-grammar = "lammps"
-syntax = "source.lammps"
 
 [language_servers.lammps-lsp]
