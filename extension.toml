@@ -12,4 +12,4 @@ commit = "6fe801541d1c4fb8710b5bc20a6ffa95a641b1ec"
 
 [language_servers.lammps-lsp]
 name = "LAMMPS LSP"
-language = "lammps"
+language = "LAMMPS"

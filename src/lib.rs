@@ -1,18 +1,17 @@
-use std::sync::Mutex;
 use zed_extension_api::{
     self as zed, Architecture, DownloadedFileType, GithubReleaseOptions, LanguageServerId,
     LanguageServerInstallationStatus, Os, Result,
 };
 
 struct LammpsExtension {
-    cached_binary_path: Mutex<Option<String>>,
+    cached_binary_path: Option<String>,
 }
 
 impl LammpsExtension {
     fn asset_name(os: Os, arch: Architecture) -> Option<&'static str> {
         match (os, arch) {
             (Os::Linux, Architecture::X8664) => Some("lammps-lsp-x86_64-unknown-linux-gnu"),
-            (Os::Windows, Architecture::X8664) => Some("lammps-lsp-x86_64-pc-windows-gnu.exe"),
+            (Os::Windows, Architecture::X8664) => Some("lammps-lsp-x86_64-pc-windows-msvc.exe"),
             (Os::Mac, Architecture::X8664) => Some("lammps-lsp-x86_64-apple-darwin"),
             (Os::Mac, Architecture::Aarch64) => Some("lammps-lsp-aarch64-apple-darwin"),
             _ => None,
@@ -115,10 +114,7 @@ impl LammpsExtension {
             &LanguageServerInstallationStatus::None,
         );
 
-        self.cached_binary_path
-            .lock()
-            .unwrap()
-            .replace(binary_path.clone());
+        self.cached_binary_path = Some(binary_path.clone());
 
         Ok(binary_path)
     }
@@ -127,7 +123,7 @@ impl LammpsExtension {
 impl zed::Extension for LammpsExtension {
     fn new() -> Self {
         Self {
-            cached_binary_path: Mutex::new(None),
+            cached_binary_path: None,
         }
     }
 
@@ -136,8 +132,17 @@ impl zed::Extension for LammpsExtension {
         language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
-        if let Some(path) = self.cached_binary_path.lock().unwrap().clone() {
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &LanguageServerInstallationStatus::CheckingForUpdate,
+        );
+
+        if let Some(path) = self.cached_binary_path.clone() {
             if std::fs::metadata(&path).is_ok() {
+                zed::set_language_server_installation_status(
+                    language_server_id,
+                    &LanguageServerInstallationStatus::None,
+                );
                 return Ok(zed::Command {
                     command: path,
                     args: vec![],
@@ -147,6 +152,10 @@ impl zed::Extension for LammpsExtension {
         }
 
         if let Some(path) = worktree.which("lammps-lsp") {
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &LanguageServerInstallationStatus::None,
+            );
             return Ok(zed::Command {
                 command: path,
                 args: vec![],
