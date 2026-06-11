@@ -10,6 +10,7 @@ brackets = [
 ]
 
 [tree_sitter]
+grammar = "lammps"
 syntax = "source.lammps"
 
 [language_servers.lammps-lsp]
