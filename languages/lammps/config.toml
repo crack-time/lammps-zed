@@ -4,9 +4,9 @@ injection_regex = "lammps"
 file_types = ["lmp", "lmps", "lammps", "in.*", "*.lammps"]
 autoclose_before = "{[(,"
 brackets = [
-  { pair = "{ }", surrounds = true },
-  { pair = "[ ]", surrounds = true },
-  { pair = "( )", surrounds = true },
+  { start = "{", end = "}", close = true, newline = true },
+  { start = "[", end = "]", close = true, newline = true },
+  { start = "(", end = ")", close = true, newline = true },
 ]
 
 [tree_sitter]
