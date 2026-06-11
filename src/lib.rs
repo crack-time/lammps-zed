@@ -75,9 +75,21 @@ impl LammpsExtension {
                 &LanguageServerInstallationStatus::Downloading,
             );
 
+            if std::path::Path::new(&version_dir).is_file() {
+                std::fs::remove_file(&version_dir).ok();
+            }
+            std::fs::create_dir_all(&version_dir).map_err(|e| {
+                let msg = format!("Failed to create directory: {e}");
+                zed::set_language_server_installation_status(
+                    language_server_id,
+                    &LanguageServerInstallationStatus::Failed(msg.clone()),
+                );
+                msg
+            })?;
+
             zed::download_file(
                 &asset.download_url,
-                &version_dir,
+                &binary_path,
                 DownloadedFileType::Uncompressed,
             )
             .map_err(|e| {
@@ -149,18 +161,6 @@ impl zed::Extension for LammpsExtension {
                     env: worktree.shell_env(),
                 });
             }
-        }
-
-        if let Some(path) = worktree.which("lammps-lsp") {
-            zed::set_language_server_installation_status(
-                language_server_id,
-                &LanguageServerInstallationStatus::None,
-            );
-            return Ok(zed::Command {
-                command: path,
-                args: vec![],
-                env: worktree.shell_env(),
-            });
         }
 
         let binary_path = self.install_binary(language_server_id)?;
