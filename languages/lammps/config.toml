@@ -9,5 +9,5 @@ brackets = [
   { start = "[", end = "]", close = true, newline = true },
   { start = "(", end = ")", close = true, newline = true },
 ]
-line_comments = ["#"]
+line_comments = ["# "]
 
