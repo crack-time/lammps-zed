@@ -12,7 +12,6 @@
 
 (command_name) @keyword
 
-(line_continuation) @string.escape
 "&" @string.escape
 
 ; Control flow in expressions
