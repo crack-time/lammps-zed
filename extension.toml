@@ -9,7 +9,7 @@ license = "MIT"
 
 [grammars.lammps]
 repository = "https://github.com/crack-time/lammps-tree-sitter"
-commit = "642e2b6ccb7a13fee0a6e0c2f14acfb23ac5ac9f"
+commit = "642e2b6145c68dc462e1a04a552d7f9ae9e46f65"
 
 [language_servers.lammps-lsp]
 name = "LAMMPS LSP"
